@@ -1,0 +1,61 @@
+{
+  "model": {
+    "name": "glm-5:cloud",
+    "provider": "ollama",
+    "type": "cloud",
+    "config": {
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "max_tokens": 4096,
+      "context_window": 32768,
+      "repeat_penalty": 1.1
+    }
+  },
+  "fallback": {
+    "enabled": true,
+    "models": ["llama3.2:latest", "mistral:latest"],
+    "timeout_ms": 5000
+  },
+  "agents": {
+    "architekt-pm": {
+      "model": "glm-5-cloud",
+      "temperature": 0.5,
+      "max_tokens": 8192,
+      "system_prompt_suffix": "Du bist der Architekt und Project Manager. Denke strukturiert und systematisch."
+    },
+    "entwickler": {
+      "model": "glm-5-cloud",
+      "temperature": 0.3,
+      "max_tokens": 8192,
+      "system_prompt_suffix": "Du bist der Entwickler. Schreibe sauberen, getesteten Code."
+    },
+    "tester-qa": {
+      "model": "glm-5-cloud",
+      "temperature": 0.2,
+      "max_tokens": 4096,
+      "system_prompt_suffix": "Du bist der QA-Engineer. Finde Edge Cases und validiere gegen Acceptance Criteria."
+    },
+    "dokumentator": {
+      "model": "glm-5-cloud",
+      "temperature": 0.4,
+      "max_tokens": 4096,
+      "system_prompt_suffix": "Du bist der Dokumentator. Schreibe klare, verstaendliche Dokumentation."
+    },
+    "git-manager": {
+      "model": "glm-5-cloud",
+      "temperature": 0.3,
+      "max_tokens": 4096,
+      "system_prompt_suffix": "Du bist der Git Manager. Halte dich an Conventional Commits und Best Practices."
+    }
+  },
+  "rate_limiting": {
+    "requests_per_minute": 60,
+    "tokens_per_minute": 100000,
+    "cooldown_seconds": 1
+  },
+  "retry": {
+    "max_attempts": 3,
+    "backoff_ms": 1000,
+    "backoff_multiplier": 2
+  }
+}

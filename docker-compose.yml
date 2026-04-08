@@ -1,0 +1,194 @@
+# Multi-Agent Project Team System - Docker Compose
+# Based on openclaw-docker with glm-5-cloud model
+version: '3.8'
+
+services:
+  # ===========================================
+  # Ollama Service (LLM Backend)
+  # ===========================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: project-team-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+      - ./models:/models:ro
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
+    deploy:
+      resources:
+        reservations:
+          memory: 4G
+        limits:
+          memory: 16G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - team-network
+
+  # ===========================================
+  # Model Setup Service (one-time setup)
+  # ===========================================
+  model-setup:
+    image: ollama/ollama:latest
+    container_name: project-team-model-setup
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    command: >
+      bash -c "
+        echo 'Setting up models...'
+        ollama pull glm-5-cloud || echo 'glm-5-cloud not available, using fallback'
+        ollama list
+        echo 'Models ready!'
+      "
+    networks:
+      - team-network
+
+  # ===========================================
+  # Project Team Orchestrator
+  # ===========================================
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.orchestrator
+    container_name: project-team-orchestrator
+    restart: unless-stopped
+    depends_on:
+      model-setup:
+        condition: service_completed_successfully
+    volumes:
+      - ./backlog:/app/backlog
+      - ./config:/app/config:ro
+      - ./shared:/app/shared
+      - ./logs:/app/logs
+      - ./.team:/app/.team
+      - ./agents:/app/agents
+    environment:
+      - TEAM_ROOT=/app
+      - MODEL=glm-5-cloud
+      - MAX_TASK_TIME=600
+      - OLLAMA_HOST=http://ollama:11434
+    command: ["./coordinator/orchestrator.sh", "run"]
+    networks:
+      - team-network
+
+  # ===========================================
+  # Project Team Worker
+  # ===========================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: project-team-worker
+    restart: unless-stopped
+    depends_on:
+      model-setup:
+        condition: service_completed_successfully
+    volumes:
+      - ./backlog:/app/backlog
+      - ./config:/app/config:ro
+      - ./shared:/app/shared
+      - ./logs:/app/logs
+      - ./.team:/app/.team
+      - ./agents:/app/agents
+      - ./results:/app/results
+      # Mount for project access
+      - ~/projects:/projects:rw
+    environment:
+      - TEAM_ROOT=/app
+      - MODEL=glm-5-cloud
+      - MAX_TASK_TIME=600
+      - OLLAMA_HOST=http://ollama:11434
+    command: ["./scripts/team-worker.sh", "run"]
+    networks:
+      - team-network
+
+  # ===========================================
+  # Dashboard (Optional - Web UI)
+  # ===========================================
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: project-team-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backlog:/app/backlog:ro
+      - ./logs:/app/logs:ro
+      - ./.team:/app/.team:ro
+    environment:
+      - NODE_ENV=production
+      - TEAM_ROOT=/app
+    networks:
+      - team-network
+    profiles:
+      - dashboard
+
+  # ===========================================
+  # Redis (Optional - State Management)
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: project-team-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - team-network
+    profiles:
+      - redis
+
+volumes:
+  ollama-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  team-network:
+    driver: bridge
+
+# ===========================================
+# Usage Instructions
+# ===========================================
+#
+# Basic setup (Orchestrator + Worker + Ollama):
+#   docker-compose up -d
+#
+# With Dashboard:
+#   docker-compose --profile dashboard up -d
+#
+# With Redis for state management:
+#   docker-compose --profile redis up -d
+#
+# With all optional services:
+#   docker-compose --profile dashboard --profile redis up -d
+#
+# View logs:
+#   docker-compose logs -f orchestrator
+#   docker-compose logs -f worker
+#
+# Check status:
+#   docker-compose exec orchestrator ./coordinator/orchestrator.sh status
+#   docker-compose exec worker ./scripts/team-worker.sh status
+#
+# Add task:
+#   docker-compose exec worker ./scripts/task-creator.sh pipeline "Your task description"
+#

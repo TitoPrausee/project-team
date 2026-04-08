@@ -1,0 +1,44 @@
+# Dockerfile for Project Team Orchestrator
+FROM ubuntu:22.04
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    bash \
+    jq \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd -m -s /bin/bash teamuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy scripts and configs
+COPY coordinator/ /app/coordinator/
+COPY config/ /app/config/
+COPY shared/ /app/shared/
+COPY scripts/ /app/scripts/
+
+# Make scripts executable
+RUN chmod +x /app/coordinator/*.sh /app/scripts/*.sh
+
+# Create directories
+RUN mkdir -p /app/backlog/{todo,doing,done,failed,handoffs/{pending,archive}} \
+    /app/logs/agents \
+    /app/.team \
+    /app/agents
+
+# Set ownership
+RUN chown -R teamuser:teamuser /app
+
+# Switch to app user
+USER teamuser
+
+# Environment
+ENV TEAM_ROOT=/app
+ENV MODEL=glm-5-cloud
+
+# Default command
+CMD ["./coordinator/orchestrator.sh", "run"]

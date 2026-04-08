@@ -1,0 +1,325 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "handoff-schema.json",
+  "title": "Agent Handoff Payload",
+  "description": "Schema fuer strukturierte Handoffs zwischen Agenten im Multi-Agent Project Team System",
+  "type": "object",
+  "required": ["from_agent", "to_agent", "timestamp", "status", "payload"],
+  "properties": {
+    "from_agent": {
+      "type": "string",
+      "enum": ["architekt-pm", "entwickler", "tester-qa", "dokumentator", "git-manager", "user"],
+      "description": "Der Agent, der den Handoff sendet"
+    },
+    "to_agent": {
+      "type": "string",
+      "enum": ["architekt-pm", "entwickler", "tester-qa", "dokumentator", "git-manager", "complete"],
+      "description": "Der Ziel-Agent oder 'complete' wenn der Pipeline abgeschlossen ist"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 Timestamp des Handoffs"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["READY", "BLOCKED", "IN_REVISION", "APPROVED", "DEPLOYED"],
+      "description": "Status des Handoffs"
+    },
+    "task_reference": {
+      "type": "string",
+      "description": "Referenz zur urspruenglichen Task-ID"
+    },
+    "iteration": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Iteration-Runde (fuer Revision-Loops)"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Agent-spezifischer Payload",
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "architecture_brief" },
+            "project_name": { "type": "string" },
+            "version": { "type": "string" },
+            "architecture_overview": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "enum": ["monolith", "microservice", "serverless", "hybrid"] },
+                "diagram_url": { "type": ["string", "null"] },
+                "key_components": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "tech_stack": {
+              "type": "object",
+              "properties": {
+                "language": { "type": "string" },
+                "framework": { "type": "string" },
+                "database": { "type": "string" },
+                "testing": { "type": "string" },
+                "ci_cd": { "type": "string" }
+              }
+            },
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "priority": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+                  "assigned_to": { "type": "string" },
+                  "dependencies": { "type": "array", "items": { "type": "string" } },
+                  "estimated_effort": { "type": "string" },
+                  "acceptance_criteria": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            },
+            "adrs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "title": { "type": "string" },
+                  "status": { "type": "string", "enum": ["proposed", "accepted", "deprecated"] },
+                  "decision": { "type": "string" },
+                  "rationale": { "type": "string" }
+                }
+              }
+            },
+            "timeline": {
+              "type": "object",
+              "properties": {
+                "sprint_duration": { "type": "string" },
+                "milestones": { "type": "array", "items": { "type": "object" } }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "implementation_report" },
+            "project_name": { "type": "string" },
+            "task_id": { "type": "string" },
+            "branch": { "type": "string" },
+            "changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string" },
+                  "type": { "type": "string", "enum": ["created", "modified", "deleted"] },
+                  "lines_added": { "type": "integer" },
+                  "lines_removed": { "type": "integer" },
+                  "description": { "type": "string" }
+                }
+              }
+            },
+            "tests": {
+              "type": "object",
+              "properties": {
+                "unit_tests": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer" },
+                    "passed": { "type": "integer" },
+                    "failed": { "type": "integer" }
+                  }
+                },
+                "integration_tests": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer" },
+                    "passed": { "type": "integer" },
+                    "failed": { "type": "integer" }
+                  }
+                },
+                "coverage_percent": { "type": "number" }
+              }
+            },
+            "known_issues": { "type": "array", "items": { "type": "string" } },
+            "documentation_needed": { "type": "array", "items": { "type": "string" } },
+            "review_notes": { "type": "string" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "qa_report" },
+            "project_name": { "type": "string" },
+            "task_id": { "type": "string" },
+            "test_results": {
+              "type": "object",
+              "properties": {
+                "total_tests": { "type": "integer" },
+                "passed": { "type": "integer" },
+                "failed": { "type": "integer" },
+                "skipped": { "type": "integer" },
+                "coverage_percent": { "type": "number" }
+              }
+            },
+            "bugs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "severity": { "type": "string", "enum": ["critical", "major", "minor", "trivial"] },
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "reproduction_steps": { "type": "array", "items": { "type": "string" } },
+                  "expected_behavior": { "type": "string" },
+                  "actual_behavior": { "type": "string" },
+                  "status": { "type": "string", "enum": ["open", "in_progress", "resolved", "wont_fix"] }
+                }
+              }
+            },
+            "recommendations": { "type": "array", "items": { "type": "string" } },
+            "ready_for_production": { "type": "boolean" },
+            "blocking_issues": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "documentation_report" },
+            "project_name": { "type": "string" },
+            "task_id": { "type": "string" },
+            "updated_files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string" },
+                  "type": { "type": "string", "enum": ["README", "API_DOCS", "CHANGELOG", "CODE_COMMENTS", "USER_GUIDE"] },
+                  "changes_summary": { "type": "string" }
+                }
+              }
+            },
+            "api_documentation": {
+              "type": "object",
+              "properties": {
+                "endpoints": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": { "type": "string" },
+                      "method": { "type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+                      "description": { "type": "string" },
+                      "request_body": { "type": ["object", "null"] },
+                      "response": { "type": "object" }
+                    }
+                  }
+                }
+              }
+            },
+            "changelog_entry": {
+              "type": "object",
+              "properties": {
+                "version": { "type": "string" },
+                "date": { "type": "string" },
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string", "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"] },
+                      "description": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            },
+            "documentation_completeness": {
+              "type": "object",
+              "properties": {
+                "readme": { "type": "boolean" },
+                "api_docs": { "type": "boolean" },
+                "code_comments": { "type": "boolean" },
+                "changelog": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "git_report" },
+            "project_name": { "type": "string" },
+            "task_id": { "type": "string" },
+            "git_operations": {
+              "type": "object",
+              "properties": {
+                "commits": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "hash": { "type": "string" },
+                      "message": { "type": "string" },
+                      "author": { "type": "string" },
+                      "timestamp": { "type": "string" }
+                    }
+                  }
+                },
+                "branch": { "type": "string" },
+                "pull_request": {
+                  "type": "object",
+                  "properties": {
+                    "number": { "type": "integer" },
+                    "title": { "type": "string" },
+                    "status": { "type": "string", "enum": ["open", "merged", "closed"] },
+                    "url": { "type": "string" }
+                  }
+                }
+              }
+            },
+            "issue_updates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "number": { "type": "integer" },
+                  "status": { "type": "string", "enum": ["open", "closed"] },
+                  "labels_added": { "type": "array", "items": { "type": "string" } },
+                  "assignees": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            },
+            "project_board": {
+              "type": "object",
+              "properties": {
+                "column": { "type": "string" },
+                "card_id": { "type": "string" }
+              }
+            },
+            "final_status": { "type": "string", "enum": ["completed", "needs_review", "blocked"] }
+          }
+        }
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "duration_seconds": { "type": "integer" },
+        "tokens_used": { "type": "integer" },
+        "model": { "type": "string" },
+        "workspace_path": { "type": "string" }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "severity": { "type": "string", "enum": ["critical", "major", "minor"] }
+        }
+      }
+    }
+  }
+}

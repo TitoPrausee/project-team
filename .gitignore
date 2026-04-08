@@ -1,0 +1,53 @@
+# Logs
+logs/
+*.log
+
+# Runtime state
+.team/
+tmp/
+*.pid
+*.lock
+
+# Node modules
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Backlog working files (keep structure)
+backlog/doing/*
+backlog/failed/*
+backlog/handoffs/pending/*
+backlog/handoffs/archive/*
+!backlog/doing/.gitkeep
+!backlog/failed/.gitkeep
+!backlog/handoffs/pending/.gitkeep
+!backlog/handoffs/archive/.gitkeep
+
+# Agent workspace files (keep structure)
+agents/*/workspace/*
+!agents/*/workspace/.gitkeep
+agents/*/memory/*
+!agents/*/memory/.gitkeep
